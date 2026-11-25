@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Иконки сайта -->
+<link rel="icon" type="image/png" sizes="512x512" href="./Frame512.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./Frame192.png">
+<link rel="icon" href="./Frame512.ico" sizes="any">
+<link rel="apple-touch-icon" sizes="180x180" href="./Frame180.png">
+<title>Генератор резюме — бесплатно, без регистрации</title>
+<!-- Библиотеки для PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<!-- Библиотека для DOCX (ИСПРАВЛЕННЫЙ CDN) -->
+<script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js" defer></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, sans-serif;
+    background: linear-gradient(160deg, #eef2f7 0%, #f8fafc 55%, #e9eef5 100%);
+    background-attachment: fixed;
+    color: #0f172a;
+    font-size: 15px;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- Шапка ---------- */
+  .toolbar {
+    position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; padding: 14px 28px;
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 11px;
+    font-weight: 700; font-size: 15px; letter-spacing: -.1px;
+    color: #0f172a;
+  }
+  .brand-mark {
+    width: 32px; height: 32px; border-radius: 6px;
+    background: #0f172a;
+    display: grid; place-items: center; color: #fff;
+    font-family: Georgia, serif; font-size: 17px; font-weight: 700;
+  }
+  .brand small {
+    display: block; font-size: 11px; font-weight: 500;
+    color: #64748b; letter-spacing: 0; margin-top: 2px;
+  }
+
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    border: none; border-radius: 8px; padding: 9px 15px;
+    font-size: 13.5px; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: .15s;
+    white-space: nowrap;
+  }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+  .btn.primary { background: #1e40af; color: #fff; }
+  .btn.primary:hover:not(:disabled) { background: #1e3a8a; }
+  .btn.success { background: #059669; color: #fff; }
+  .btn.success:hover:not(:disabled) { background: #047857; }
+  .btn.ghost {
+    background: #fff; color: #334155;
+    border: 1px solid #e2e8f0;
+  }
+  .btn.ghost:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; }
+  .btn.small { padding: 6px 11px; font-size: 12.5px; border-radius: 7px; }
+
+  .privacy-bar {
+    max-width: 1440px; margin: 0 auto; padding: 10px 28px 0;
+    display: flex; align-items: center; gap: 8px;
+    color: #64748b; font-size: 12.5px;
+  }
+  .privacy-bar svg { width: 14px; height: 14px; flex-shrink: 0; color: #059669; }
+
+  /* ---------- Раскладка ---------- */
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 430px) minmax(0, 1fr);
+    gap: 32px;
+    padding: 20px 28px 48px;
+    max-width: 1440px;
+    margin: 0 auto;
+    align-items: start;
+  }
+  @media (max-width: 1000px) {
+    .layout { grid-template-columns: 1fr; gap: 22px; padding: 18px 16px 40px; }
+    .toolbar { padding: 12px 16px; flex-wrap: wrap; }
+    .privacy-bar { padding: 8px 16px 0; }
+  }
+
+  /* ---------- Карточки формы ---------- */
+  .card {
+    background: #fff;
+    border: 1px solid #e8edf3;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 14px;
+  }
+  .card-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 13.5px; font-weight: 700; color: #0f172a;
+    letter-spacing: -.1px;
+  }
+  .card-title .ico {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: #f1f5f9; color: #1e40af;
+    display: grid; place-items: center; flex-shrink: 0;
+  }
+  .card-title .ico svg { width: 15px; height: 15px; }
+
+  label {
+    display: block; font-size: 12px; font-weight: 600;
+    color: #64748b; margin-bottom: 13px;
+  }
+  label .req { color: #dc2626; margin-left: 1px; }
+  input[type="text"], input[type="email"], input[type="tel"], textarea, select {
+    display: block; width: 100%; margin-top: 6px;
+    padding: 10px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-family: inherit; font-size: 14px; color: #0f172a;
+    background: #fff;
+    transition: .15s;
+    resize: vertical;
+  }
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+  input::placeholder, textarea::placeholder { color: #a3b1c6; }
+  input:hover, textarea:hover, select:hover { border-color: #cbd5e1; }
+  input:focus, textarea:focus, select:focus {
+    outline: none; border-color: #1e40af; background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(30,64,175,.1);
+  }
+  input.invalid, textarea.invalid {
+    border-color: #dc2626; background: #fef2f2;
+  }
+  .error-msg {
+    display: block; color: #dc2626; font-size: 11.5px;
+    margin-top: 5px; font-weight: 600;
+  }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+
+  /* ---------- Фото ---------- */
+  .photo-row {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px; background: #f8fafc;
+    border: 1px solid #eef2f7; border-radius: 10px;
+    margin-bottom: 14px;
+  }
+  .photo-thumb {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: #e2e8f0; flex-shrink: 0;
+    overflow: hidden;
+    display: grid; place-items: center;
+    color: #94a3b8;
+  }
+  .photo-thumb img { width: 100%; height: 100%; display: block; }
+  .photo-thumb svg { width: 22px; height: 22px; }
+  .photo-info { flex: 1; min-width: 0; }
+  .photo-info strong {
+    display: block; font-size: 13px; color: #0f172a; margin-bottom: 2px;
+  }
+  .photo-info small { color: #64748b; font-size: 11.5px; }
+  .photo-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .photo-actions .btn { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
+
+  .item-card {
+    background: #f8fafc;
+    border: 1px solid #eef2f7;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .item-card:last-child { margin-bottom: 0; }
+  .item-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+  }
+  .item-head > span {
+    font-size: 11.5px; font-weight: 700; color: #1e40af;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .remove {
+    background: none; border: none; color: #94a3b8; cursor: pointer;
+    padding: 4px 7px; border-radius: 6px;
+    font-size: 14px; line-height: 1; transition: .15s;
+  }
+  .remove:hover { background: #fee2e2; color: #dc2626; }
+
+  details.policy {
+    background: #fff;
+    border: 1px solid #e8edf3;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+    font-size: 12.5px; color: #475569;
+  }
+  details.policy summary {
+    cursor: pointer; font-weight: 600; color: #334155;
+    font-size: 13px; display: flex; align-items: center; gap: 8px;
+    list-style: none;
+  }
+  details.policy summary::-webkit-details-marker { display: none; }
+  details.policy summary::before { content: "🔒"; font-size: 13px; }
+  details.policy p { margin: 12px 0 0; line-height: 1.6; }
+
+  /* ---------- Превью ---------- */
+  .preview-panel { position: relative; }
+  .preview-label {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px; font-size: 11.5px; color: #64748b;
+    font-weight: 600; text-transform: uppercase; letter-spacing: .8px;
+  }
+
+  .resume {
+    background: #fff;
+    color: #1e293b;
+    padding: 52px 56px;
+    border-radius: 4px;
+    box-shadow:
+      0 1px 3px rgba(15,23,42,.05),
+      0 20px 40px -12px rgba(15,23,42,.12);
+    max-width: 820px; margin: 0 auto;
+    line-height: 1.55; font-size: 14px;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* ---- Шапка резюме ---- */
+  .resume-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 24px; padding-bottom: 22px;
+    border-bottom: 2px solid #0f172a;
+    margin-bottom: 20px;
+  }
+  .resume-header-main { flex: 1; min-width: 0; word-break: break-word; }
+
+  .resume h1 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 32px; font-weight: 700;
+    color: #0f172a; margin: 0 0 8px;
+    letter-spacing: -.4px; line-height: 1.15;
+  }
+  .r-position {
+    font-size: 15px; color: #1e40af;
+    font-weight: 600; margin-bottom: 14px;
+    letter-spacing: -.1px;
+  }
+  .r-contacts {
+    display: flex; flex-wrap: wrap; gap: 4px 14px;
+    font-size: 13px; color: #475569;
+  }
+  .r-contacts span { display: inline-flex; align-items: center; }
+  .r-contacts span + span::before {
+    content: "·"; color: #cbd5e1;
+    margin-right: 10px; font-weight: 700;
+  }
+  .r-contacts span:first-child::before { content: none; }
+
+  .resume-photo {
+    width: 104px; height: 104px; border-radius: 50%;
+    overflow: hidden; flex-shrink: 0;
+    border: 3px solid #f1f5f9;
+    background: #f8fafc;
+  }
+  .resume-photo img {
+    width: 100%; height: 100%;
+    display: block; border-radius: 50%;
+  }
+
+  /* ---- Личные данные ---- */
+  .r-personal {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 24px;
+    margin-bottom: 24px;
+    font-size: 13.5px;
+    color: #475569;
+  }
+  .r-personal strong { color: #0f172a; font-weight: 600; }
+
+  /* ---- Секции ---- */
+  .r-section { margin-bottom: 22px; }
+  .r-section:last-child { margin-bottom: 0; }
+  .r-section h2 {
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 1.8px; font-weight: 700;
+    color: #1e40af; margin: 0 0 14px;
+    padding-bottom: 7px;
+    border-bottom: 1px solid #e2e8f0;
+    break-after: avoid;
+  }
+  .r-summary { margin: 0; color: #334155; line-height: 1.65; }
+
+  .r-item { margin-bottom: 18px; break-inside: avoid; }
+  .r-item:last-child { margin-bottom: 0; }
+  .r-item-top {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  }
+  .r-item-title {
+    font-weight: 700; font-size: 15px; color: #0f172a;
+    letter-spacing: -.1px;
+  }
+  .r-item-period {
+    color: #1e40af; 
+    font-size: 14.5px; 
+    white-space: nowrap;
+    font-weight: 700; 
+    letter-spacing: .2px;
+  }
+  .r-item-sub {
+    color: #475569; 
+    font-size: 13.5px; 
+    margin-top: 4px;
+    font-weight: 500;
+  }
+  .r-duties {
+    margin: 8px 0 0; padding-left: 18px;
+    color: #334155; line-height: 1.6;
+  }
+  .r-duties li { margin-bottom: 4px; }
+  .r-duties li::marker { color: #94a3b8; }
+
+  .r-skills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .r-skills span {
+    background: #f1f5f9; color: #1e293b;
+    padding: 5px 12px; border-radius: 4px;
+    font-size: 12.5px; font-weight: 500;
+    border: 1px solid #e2e8f0;
+  }
+
+  .r-langs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 32px;
+  }
+  .r-lang {
+    display: flex;
+    gap: 8px;
+    font-size: 13.5px;
+  }
+  .r-lang-level {
+    color: #1e40af;
+    font-weight: 600;
+  }
+
+  .r-empty {
+    color: #94a3b8; text-align: center; padding: 60px 0;
+    font-size: 14px; line-height: 1.6;
+  }
+
+  /* ---------- Печать (fallback) ---------- */
+  @page { size: A4; margin: 14mm; }
+  @media print {
+    .no-print { display: none !important; }
+    body { background: #fff !important; }
+    .layout {
+      display: block !important; padding: 0 !important;
+      margin: 0 !important; max-width: none !important;
+    }
+    .form-panel { display: none !important; }
+    .preview-label { display: none !important; }
+    .resume {
+      box-shadow: none !important; border-radius: 0 !important;
+      max-width: none !important; width: 100% !important;
+      margin: 0 !important; padding: 0 !important;
+    }
+    .resume-header, .r-item, .r-section h2 { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<header class="toolbar no-print">
+  <div class="brand">
+    <div class="brand-mark">Р</div>
+    <div>
+      Генератор резюме
+      <small>бесплатно · без регистрации · приватно</small>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn ghost" id="sampleBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v18M3 12h18"/></svg>
+      Пример
+    </button>
+    <button class="btn ghost" id="clearBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      Очистить
+    </button>
+    <button class="btn success" id="docxBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Скачать Word
+    </button>
+    <button class="btn primary" id="downloadBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      Скачать PDF
+    </button>
+  </div>
+</header>
+
+<div class="privacy-bar no-print">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+  Все данные обрабатываются только в вашем браузере и никуда не отправляются.
+</div>
+
+<div class="layout">
+  <!-- ================= ФОРМА ================= -->
+  <main class="form-panel no-print">
+
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <span class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </span>
+          Личные данные
+        </div>
+      </div>
+
+      <div class="photo-row">
+        <div class="photo-thumb" id="photoThumb">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </div>
+        <div class="photo-info">
+          <strong>Фотография</strong>
+          <small>Необязательно · JPG, PNG до 10 МБ</small>
+          <div class="photo-actions">
+            <button type="button" class="btn ghost" id="uploadPhotoBtn">Загрузить</button>
+            <button type="button" class="btn ghost" id="removePhotoBtn" style="display:none">Удалить</button>
+          </div>
+        </div>
+        <input type="file" id="photoInput" accept="image/*" hidden>
+      </div>
+
+      <div class="row">
+        <label>Фамилия <span class="req">*</span>
+          <input id="f_surname" type="text" autocomplete="off" placeholder="Иванов"
+                 data-allow="letters" data-capitalize="true" maxlength="60">
+        </label>
+        <label>Имя <span class="req">*</span>
+          <input id="f_name" type="text" autocomplete="off" placeholder="Иван"
+                 data-allow="letters" data-capitalize="true" maxlength="60">
+        </label>
+      </div>
+      <label>Отчество
+        <input id="f_middlename" type="text" autocomplete="off" placeholder="Иванович"
+               data-allow="letters" data-capitalize="true" maxlength="60">
+      </label>
+      <label>Желаемая должность <span class="req">*</span>
+        <input id="f_position" type="text" autocomplete="off" placeholder="Frontend-разработчик"
+               data-allow="letters" data-capitalize="true" maxlength="100">
+      </label>
+      <div class="row">
+        <label>Email
+          <input id="f_email" type="email" autocomplete="off" placeholder="ivan@mail.ru"
+                 data-allow="email" maxlength="100">
+        </label>
+        <label>Телефон
+          <input id="f_phone" type="tel" autocomplete="off" placeholder="+7 900 000-00-00"
+                 data-allow="phone" maxlength="20">
+        </label>
+      </div>
+      <div class="row">
+        <label>Город
+          <input id="f_city" type="text" autocomplete="off" placeholder="Москва"
+                 data-allow="letters" data-capitalize="true" maxlength="60">
+        </label>
+        <label>Ссылка
+          <input id="f_link" type="text" autocomplete="off" placeholder="github.com/ivan"
+                 data-allow="link" maxlength="120">
+        </label>
+      </div>
+      <div class="row">
+        <label>Пол
+          <select id="f_gender">
+            <option value="">Не указан</option>
+            <option value="Мужской">Мужской</option>
+            <option value="Женский">Женский</option>
+          </select>
+        </label>
+        <label>Гражданство
+          <input id="f_citizenship" type="text" autocomplete="off" placeholder="Российская Федерация"
+                 data-allow="letters" data-capitalize="true" maxlength="60">
+        </label>
+      </div>
+      <div class="row">
+        <label>Желаемая зарплата
+          <input id="f_salary" type="text" autocomplete="off" placeholder="100 000"
+                 data-allow="salary" maxlength="20">
+        </label>
+        <label>График работы
+          <select id="f_schedule">
+            <option value="Любой">Любой</option>
+            <option value="Полный день">Полный день</option>
+            <option value="Удаленная работа">Удаленная работа</option>
+            <option value="Частичная занятость">Частичная занятость</option>
+            <option value="Гибкий график">Гибкий график</option>
+            <option value="Проектная работа">Проектная работа</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <span class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </span>
+          О себе
+        </div>
+      </div>
+      <textarea id="f_summary" rows="3" autocomplete="off" maxlength="600"
+        placeholder="Коротко о вашем опыте и сильных сторонах"></textarea>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <span class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          </span>
+          Опыт работы
+        </div>
+        <button data-action="add-exp" class="btn small ghost" type="button">+ Добавить</button>
+      </div>
+      <div id="expList"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <span class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+          </span>
+          Образование
+        </div>
+        <button data-action="add-edu" class="btn small ghost" type="button">+ Добавить</button>
+      </div>
+      <div id="eduList"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <span class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 8l6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/></svg>
+          </span>
+          Языки
+        </div>
+        <button data-action="add-lang" class="btn small ghost" type="button">+ Добавить</button>
+      </div>
+      <div id="langList"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <span class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </span>
+          Навыки
+        </div>
+      </div>
+      <textarea id="f_skills" rows="3" autocomplete="off" maxlength="400"
+        placeholder="Через запятую или с новой строки: JavaScript, React, SQL"></textarea>
+    </section>
+
+    <details class="policy">
+      <summary>Политика конфиденциальности</summary>
+      <p>Сервис не собирает, не хранит и не передаёт персональные данные. Вся информация,
+      которую вы вводите, включая фотографию, обрабатывается локально в вашем браузере и не отправляется
+      на сервер. Черновик может сохраняться в localStorage вашего браузера; удалить его можно кнопкой «Очистить».</p>
+      <p>Файлы PDF и DOCX формируются в браузере. PDF создаётся с помощью html2canvas и jsPDF, DOCX — с помощью html-docx-js. 
+      Все библиотеки загружаются с публичного CDN. Ваши данные им не передаются — они лишь используются для отрисовки файла.</p>
+    </details>
+
+  </main>
+
+  <!-- ================= ПРЕВЬЮ ================= -->
+  <aside class="preview-panel">
+    <div class="preview-label no-print">
+      <span>Живое превью</span>
+      <span>A4 · PDF / DOCX</span>
+    </div>
+    <div class="resume" id="resume"></div>
+  </aside>
+</div>
+
+<script>
+"use strict";
+
+/* ================== Состояние ================== */
+const emptyExp = () => ({ title: '', company: '', period: '', duties: '' });
+const emptyEdu = () => ({ school: '', degree: '', period: '' });
+const emptyLang = () => ({ name: '', level: 'B1' });
+
+const state = {
+  surname: '', name: '', middlename: '',
+  position: '', email: '', phone: '', city: '', link: '',
+  photo: '',
+  summary: '',
+  gender: '', citizenship: '', salary: '', schedule: 'Любой',
+  experience: [],
+  education: [],
+  languages: [],
+  skills: ''
+};
+
+const STATIC_FIELDS = [
+  'surname','name','middlename','position','email','phone','city','link','summary','skills',
+  'gender','citizenship','salary','schedule'
+];
+const STORAGE_KEY = 'resume-draft-v9';
+
+/* ================== Утилиты ================== */
+const esc = v => String(v == null ? '' : v)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+  .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function debounce(fn, ms) {
+  let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+function saveDraft() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+const scheduleSave = debounce(saveDraft, 400);
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+/* ================== Фильтры ввода ================== */
+const FILTERS = {
+  letters: v => v.replace(/[^A-Za-zА-Яа-яЁё\s\-']/g, ''),
+  'letters-digits': v => v.replace(/[^A-Za-zА-Яа-яЁё0-9\s\-.,«»"''()]/g, ''),
+  email: v => v.replace(/[^A-Za-z0-9@._%+\-]/g, ''),
+  phone: v => v.replace(/[^0-9+\s()\-]/g, ''),
+  period: v => v.replace(/[^0-9.\s\-–—]/g, ''),
+  link: v => v.replace(/[^A-Za-z0-9._\/:\-~?=&#@%+]/g, ''),
+  salary: v => v.replace(/[^0-9\s]/g, ''),
+  text: v => v
+};
+function capitalizeWords(str) {
+  return str.replace(/(^|[\s\-])([a-zа-яё])/g, (m, p1, p2) => p1 + p2.toUpperCase());
+}
+function applyFilter(el, filterName) {
+  const fn = FILTERS[filterName] || FILTERS.text;
+  const oldVal = el.value;
+  const oldPos = el.selectionStart ?? oldVal.length;
+  const newVal = fn(oldVal);
+  if (newVal === oldVal) return;
+  const prefix = fn(oldVal.slice(0, oldPos));
+  el.value = newVal;
+  el.setSelectionRange(prefix.length, prefix.length);
+}
+function applyCapitalize(el) {
+  const oldVal = el.value;
+  const oldPos = el.selectionStart ?? oldVal.length;
+  const newVal = capitalizeWords(oldVal);
+  if (newVal === oldVal) return;
+  el.value = newVal;
+  el.setSelectionRange(oldPos, oldPos);
+}
+
+/* ================== Ошибки ================== */
+function setError(el, msg) {
+  if (!el) return;
+  el.classList.toggle('invalid', !!msg);
+  let err = el.parentElement.querySelector('.error-msg');
+  if (msg) {
+    if (!err) {
+      err = document.createElement('span');
+      err.className = 'error-msg';
+      el.parentElement.appendChild(err);
+    }
+    err.textContent = msg;
+  } else if (err) err.remove();
+}
+function clearAllErrors() {
+  document.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
+  document.querySelectorAll('.error-msg').forEach(el => el.remove());
+}
+
+/* ================== Фото ================== */
+function renderPhotoThumb() {
+  const thumb = document.getElementById('photoThumb');
+  const removeBtn = document.getElementById('removePhotoBtn');
+  if (state.photo) {
+    thumb.innerHTML = `<img src="${state.photo}" alt="Фото">`;
+    removeBtn.style.display = '';
+  } else {
+    thumb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+    removeBtn.style.display = 'none';
+  }
+}
+
+function handlePhotoUpload(file) {
+  if (!file.type.startsWith('image/')) {
+    alert('Пожалуйста, выберите файл изображения (JPG, PNG).');
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    alert('Файл слишком большой. Максимум 10 МБ.');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const maxSize = 400;
+      const size = Math.min(img.width, img.height);
+      const sx = (img.width - size) / 2;
+      const sy = (img.height - size) / 2;
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = maxSize;
+      canvas.height = maxSize;
+      const ctx = canvas.getContext('2d');
+      
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, maxSize, maxSize);
+      
+      ctx.drawImage(img, sx, sy, size, size, 0, 0, maxSize, maxSize);
+      
+      state.photo = canvas.toDataURL('image/jpeg', 0.85);
+      renderPhotoThumb();
+      renderPreview();
+      scheduleSave();
+    };
+    img.onerror = () => alert('Не удалось прочитать изображение.');
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+document.getElementById('uploadPhotoBtn').addEventListener('click', () => {
+  document.getElementById('photoInput').click();
+});
+document.getElementById('photoInput').addEventListener('change', e => {
+  const file = e.target.files?.[0];
+  if (file) handlePhotoUpload(file);
+  e.target.value = '';
+});
+document.getElementById('removePhotoBtn').addEventListener('click', () => {
+  state.photo = '';
+  renderPhotoThumb();
+  renderPreview();
+  scheduleSave();
+});
+
+/* ================== Рендер формы ================== */
+function renderExperienceForm() {
+  const list = document.getElementById('expList');
+  list.innerHTML = '';
+  state.experience.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'item-card';
+    el.innerHTML = `
+      <div class="item-head">
+        <span>Место работы ${i + 1}</span>
+        <button type="button" class="remove" data-action="remove-exp" data-index="${i}" title="Удалить">✕</button>
+      </div>
+      <label>Должность
+        <input data-type="exp" data-field="title" data-index="${i}"
+               data-allow="letters" data-capitalize="true" maxlength="100"
+               value="${esc(item.title)}" placeholder="Frontend-разработчик">
+      </label>
+      <label>Компания
+        <input data-type="exp" data-field="company" data-index="${i}"
+               data-allow="letters-digits" data-capitalize="true" maxlength="120"
+               value="${esc(item.company)}" placeholder="ООО «Ромашка»">
+      </label>
+      <label>Период
+        <input data-type="exp" data-field="period" data-index="${i}"
+               data-allow="period" maxlength="40" inputmode="numeric"
+               value="${esc(item.period)}" placeholder="2021 — 2024">
+      </label>
+      <label>Обязанности и достижения
+        <textarea data-type="exp" data-field="duties" data-index="${i}" rows="3" maxlength="800"
+          placeholder="Каждый пункт — с новой строки">${esc(item.duties)}</textarea>
+      </label>`;
+    list.appendChild(el);
+  });
+}
+
+function renderEducationForm() {
+  const list = document.getElementById('eduList');
+  list.innerHTML = '';
+  state.education.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'item-card';
+    el.innerHTML = `
+      <div class="item-head">
+        <span>Образование ${i + 1}</span>
+        <button type="button" class="remove" data-action="remove-edu" data-index="${i}" title="Удалить">✕</button>
+      </div>
+      <label>Учебное заведение
+        <input data-type="edu" data-field="school" data-index="${i}"
+               data-allow="letters-digits" data-capitalize="true" maxlength="120"
+               value="${esc(item.school)}" placeholder="МГУ им. М.В. Ломоносова">
+      </label>
+      <label>Специальность
+        <input data-type="edu" data-field="degree" data-index="${i}"
+               data-allow="letters-digits" data-capitalize="true" maxlength="120"
+               value="${esc(item.degree)}" placeholder="Прикладная информатика, бакалавр">
+      </label>
+      <label>Период
+        <input data-type="edu" data-field="period" data-index="${i}"
+               data-allow="period" maxlength="40" inputmode="numeric"
+               value="${esc(item.period)}" placeholder="2016 — 2020">
+      </label>`;
+    list.appendChild(el);
+  });
+}
+
+function renderLanguagesForm() {
+  const list = document.getElementById('langList');
+  list.innerHTML = '';
+  state.languages.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'item-card';
+    el.innerHTML = `
+      <div class="item-head">
+        <span>Язык ${i + 1}</span>
+        <button type="button" class="remove" data-action="remove-lang" data-index="${i}" title="Удалить">✕</button>
+      </div>
+      <label>Название языка
+        <input data-type="lang" data-field="name" data-index="${i}"
+               data-allow="letters" data-capitalize="true" maxlength="50"
+               value="${esc(item.name)}" placeholder="Английский">
+      </label>
+      <label>Уровень владения
+        <select data-type="lang" data-field="level" data-index="${i}">
+          <option value="A1" ${item.level === 'A1' ? 'selected' : ''}>A1 — Начальный</option>
+          <option value="A2" ${item.level === 'A2' ? 'selected' : ''}>A2 — Элементарный</option>
+          <option value="B1" ${item.level === 'B1' ? 'selected' : ''}>B1 — Средний</option>
+          <option value="B2" ${item.level === 'B2' ? 'selected' : ''}>B2 — Средне-продвинутый</option>
+          <option value="C1" ${item.level === 'C1' ? 'selected' : ''}>C1 — Продвинутый</option>
+          <option value="C2" ${item.level === 'C2' ? 'selected' : ''}>C2 — В совершенстве</option>
+          <option value="Носитель" ${item.level === 'Носитель' ? 'selected' : ''}>Носитель</option>
+        </select>
+      </label>`;
+    list.appendChild(el);
+  });
+}
+
+/* ================== Рендер превью ================== */
+function renderPreview() {
+  const s = state;
+  let fullName = [s.surname.trim(), s.name.trim(), s.middlename.trim()].filter(Boolean).join(' ');
+  if (!fullName) fullName = 'Фамилия Имя Отчество';
+
+  const position = s.position.trim();
+  const contacts = [s.email, s.phone, s.city, s.link].map(x => x.trim()).filter(Boolean);
+
+  let html = `<header class="resume-header">
+    <div class="resume-header-main">
+      <h1>${esc(fullName)}</h1>
+      ${position ? `<div class="r-position">${esc(position)}</div>` : ''}
+      ${contacts.length
+        ? `<div class="r-contacts">${contacts.map(c => `<span>${esc(c)}</span>`).join('')}</div>`
+        : ''}
+    </div>
+    ${s.photo ? `<div class="resume-photo"><img src="${s.photo}" alt=""></div>` : ''}
+  </header>`;
+
+  const personalItems = [];
+  if (s.gender) personalItems.push(`<div><strong>Пол:</strong> ${esc(s.gender)}</div>`);
+  if (s.citizenship.trim()) personalItems.push(`<div><strong>Гражданство:</strong> ${esc(s.citizenship)}</div>`);
+  if (s.salary.trim()) personalItems.push(`<div><strong>Желаемая зарплата:</strong> ${esc(s.salary)}</div>`);
+  if (s.schedule) personalItems.push(`<div><strong>График работы:</strong> ${esc(s.schedule)}</div>`);
+
+  if (personalItems.length) {
+    html += `<div class="r-personal">${personalItems.join('')}</div>`;
+  }
+
+  if (s.summary.trim()) {
+    html += `<section class="r-section"><h2>О себе</h2>
+      <p class="r-summary">${esc(s.summary).replace(/\n/g, '<br>')}</p></section>`;
+  }
+
+  const exp = s.experience.filter(e => e.title.trim() || e.company.trim() || e.duties.trim());
+  if (exp.length) {
+    html += `<section class="r-section"><h2>Опыт работы</h2>`;
+    exp.forEach(e => {
+      const duties = e.duties.split('\n').map(d => d.trim()).filter(Boolean);
+      html += `<div class="r-item">
+        <div class="r-item-top">
+          <div class="r-item-title">${esc(e.title.trim()) || 'Должность'}</div>
+          ${e.period.trim() ? `<div class="r-item-period">${esc(e.period)}</div>` : ''}
+        </div>
+        ${e.company.trim() ? `<div class="r-item-sub">${esc(e.company)}</div>` : ''}
+        ${duties.length ? `<ul class="r-duties">${duties.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` : ''}
+      </div>`;
+    });
+    html += `</section>`;
+  }
+
+  const edu = s.education.filter(e => e.school.trim() || e.degree.trim());
+  if (edu.length) {
+    html += `<section class="r-section"><h2>Образование</h2>`;
+    edu.forEach(e => {
+      html += `<div class="r-item">
+        <div class="r-item-top">
+          <div class="r-item-title">${esc(e.school.trim()) || 'Учебное заведение'}</div>
+          ${e.period.trim() ? `<div class="r-item-period">${esc(e.period)}</div>` : ''}
+        </div>
+        ${e.degree.trim() ? `<div class="r-item-sub">${esc(e.degree)}</div>` : ''}
+      </div>`;
+    });
+    html += `</section>`;
+  }
+
+  const langs = s.languages.filter(l => l.name.trim());
+  if (langs.length) {
+    html += `<section class="r-section"><h2>Языки</h2>
+      <div class="r-langs">
+        ${langs.map(l => `<div class="r-lang"><span>${esc(l.name)}</span> <span class="r-lang-level">${esc(l.level)}</span></div>`).join('')}
+      </div></section>`;
+  }
+
+  const skills = s.skills.split(/[\n,]+/).map(x => x.trim()).filter(Boolean);
+  if (skills.length) {
+    html += `<section class="r-section"><h2>Навыки</h2>
+      <div class="r-skills">${skills.map(sk => `<span>${esc(sk)}</span>`).join('')}</div></section>`;
+  }
+
+  if (!s.summary.trim() && !exp.length && !edu.length && !skills.length && !langs.length && !personalItems.length) {
+    html += `<div class="r-empty">Заполните форму слева —<br>резюме появится здесь в реальном времени.</div>`;
+  }
+
+  document.getElementById('resume').innerHTML = html;
+}
+
+/* ================== Валидация ================== */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validateField(el, key) {
+  const val = el.value.trim();
+  if (key === 'email') {
+    if (val && !EMAIL_RE.test(val)) { setError(el, 'Некорректный email'); return false; }
+  } else if (key === 'phone') {
+    if (val && val.replace(/\D/g, '').length < 10) { setError(el, 'Минимум 10 цифр'); return false; }
+  }
+  setError(el, '');
+  return true;
+}
+
+function validateAll() {
+  clearAllErrors();
+  let ok = true;
+
+  const surnameEl = document.getElementById('f_surname');
+  const nameEl = document.getElementById('f_name');
+  const posEl = document.getElementById('f_position');
+  const emailEl = document.getElementById('f_email');
+  const phoneEl = document.getElementById('f_phone');
+
+  if (state.surname.trim().length < 2) {
+    setError(surnameEl, 'Укажите фамилию'); ok = false;
+  }
+  if (state.name.trim().length < 1) {
+    setError(nameEl, 'Укажите имя'); ok = false;
+  }
+  if (!state.position.trim()) {
+    setError(posEl, 'Укажите желаемую должность'); ok = false;
+  }
+  const email = state.email.trim();
+  const phone = state.phone.trim();
+
+  if (email && !EMAIL_RE.test(email)) {
+    setError(emailEl, 'Некорректный email'); ok = false;
+  }
+  if (phone && phone.replace(/\D/g, '').length < 10) {
+    setError(phoneEl, 'Телефон должен содержать минимум 10 цифр'); ok = false;
+  }
+  if (!email && !phone) {
+    setError(emailEl, 'Укажите email или телефон');
+    setError(phoneEl, 'Укажите email или телефон');
+    ok = false;
+  }
+  return ok;
+}
+
+/* ================== Поля ================== */
+function onStaticInput(el, key) {
+  if (el.dataset.allow) applyFilter(el, el.dataset.allow);
+  if (el.dataset.capitalize === 'true') applyCapitalize(el);
+  state[key] = el.value;
+  setError(el, '');
+  renderPreview();
+  scheduleSave();
+}
+
+STATIC_FIELDS.forEach(key => {
+  const el = document.getElementById('f_' + key);
+  if (!el) return;
+  const handler = () => onStaticInput(el, key);
+  el.addEventListener('input', handler);
+  el.addEventListener('change', handler);
+  el.addEventListener('blur', () => {
+    if (key === 'email' || key === 'phone') validateField(el, key);
+  });
+});
+
+/* ================== Делегирование ================== */
+const formPanel = document.querySelector('.form-panel');
+
+formPanel.addEventListener('input', e => {
+  const t = e.target;
+  const type = t.dataset.type;
+  if (type !== 'exp' && type !== 'edu' && type !== 'lang') return;
+  if (t.dataset.allow) applyFilter(t, t.dataset.allow);
+  if (t.dataset.capitalize === 'true') applyCapitalize(t);
+  const list = type === 'exp' ? state.experience : type === 'edu' ? state.education : state.languages;
+  const idx = +t.dataset.index;
+  if (!list[idx]) return;
+  list[idx][t.dataset.field] = t.value;
+  setError(t, '');
+  renderPreview();
+  scheduleSave();
+});
+
+formPanel.addEventListener('change', e => {
+  const t = e.target;
+  const type = t.dataset.type;
+  if (type !== 'lang') return;
+  const idx = +t.dataset.index;
+  if (!state.languages[idx]) return;
+  state.languages[idx].level = t.value;
+  renderPreview();
+  scheduleSave();
+});
+
+formPanel.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  const action = btn.dataset.action;
+
+  if (action === 'add-exp') {
+    state.experience.push(emptyExp());
+    renderExperienceForm(); renderPreview(); scheduleSave();
+  } else if (action === 'add-edu') {
+    state.education.push(emptyEdu());
+    renderEducationForm(); renderPreview(); scheduleSave();
+  } else if (action === 'add-lang') {
+    state.languages.push(emptyLang());
+    renderLanguagesForm(); renderPreview(); scheduleSave();
+  } else if (action === 'remove-exp') {
+    state.experience.splice(+btn.dataset.index, 1);
+    if (!state.experience.length) state.experience.push(emptyExp());
+    renderExperienceForm(); renderPreview(); scheduleSave();
+  } else if (action === 'remove-edu') {
+    state.education.splice(+btn.dataset.index, 1);
+    if (!state.education.length) state.education.push(emptyEdu());
+    renderEducationForm(); renderPreview(); scheduleSave();
+  } else if (action === 'remove-lang') {
+    state.languages.splice(+btn.dataset.index, 1);
+    if (!state.languages.length) state.languages.push(emptyLang());
+    renderLanguagesForm(); renderPreview(); scheduleSave();
+  }
+});
+
+/* ================== Скачать PDF ================== */
+async function generatePDF() {
+  if (typeof html2canvas === 'undefined' || !window.jspdf) {
+    throw new Error('Библиотеки PDF не загрузились');
+  }
+
+  const source = document.getElementById('resume');
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 99999;
+    background: #fff; overflow: auto;
+  `;
+
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = `
+    width: 794px; margin: 0 auto;
+    background: #fff; padding: 0;
+    box-sizing: border-box;
+  `;
+
+  const clone = source.cloneNode(true);
+  clone.removeAttribute('id');
+  clone.style.cssText = `
+    max-width: none; width: 100%;
+    margin: 0; box-shadow: none; border-radius: 0;
+    background: #fff;
+    overflow-wrap: anywhere; word-break: break-word;
+  `;
+
+  wrapper.appendChild(clone);
+  overlay.appendChild(wrapper);
+  document.body.appendChild(overlay);
+
+  await document.fonts.ready;
+  await new Promise(r => setTimeout(r, 250));
+
+  try {
+    const canvas = await html2canvas(wrapper, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      width: 794,
+      height: wrapper.scrollHeight,
+      windowWidth: 794,
+      scrollX: 0,
+      scrollY: 0
+    });
+
+    if (!canvas.width || !canvas.height) {
+      throw new Error('canvas пустой');
+    }
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pdfWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pdfHeight;
+
+    while (heightLeft > 1) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+    }
+
+    let fullName = [state.surname.trim(), state.name.trim(), state.middlename.trim()].filter(Boolean).join(' ');
+    pdf.save((fullName ? `Резюме — ${fullName}` : 'Резюме') + '.pdf');
+  } finally {
+    overlay.remove();
+  }
+}
+
+async function handleDownloadPDF() {
+  if (!validateAll()) {
+    const firstInvalid = document.querySelector('.invalid');
+    if (firstInvalid) firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  const btn = document.getElementById('downloadBtn');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Готовим PDF…';
+
+  try {
+    await generatePDF();
+  } catch (err) {
+    console.error('PDF failed:', err);
+    const proceed = confirm(
+      'Не удалось сгенерировать PDF автоматически.\n\n' +
+      'Откроется диалог печати. Выберите «Сохранить как PDF» и обязательно ' +
+      'снимите галочку «Колонтитулы» / «Headers and footers», иначе в файл ' +
+      'попадёт дата и адрес страницы.\n\nПродолжить?'
+    );
+    if (proceed) {
+      const origTitle = document.title;
+      let fullName = [state.surname.trim(), state.name.trim(), state.middlename.trim()].filter(Boolean).join(' ');
+      document.title = fullName ? `Резюме — ${fullName}` : 'Резюме';
+      setTimeout(() => {
+        window.print();
+        setTimeout(() => { document.title = origTitle; }, 500);
+      }, 100);
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
+}
+
+document.getElementById('downloadBtn').addEventListener('click', handleDownloadPDF);
+
+/* ================== Скачать DOCX ================== */
+
+/* Уменьшенная копия фото для Word (150×150) */
+function getDocxPhoto() {
+  if (!state.photo) return Promise.resolve('');
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const size = 150;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, size, size);
+      const minSide = Math.min(img.width, img.height);
+      const sx = (img.width - minSide) / 2;
+      const sy = (img.height - minSide) / 2;
+      ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => resolve('');
+    img.src = state.photo;
+  });
+}
+
+async function generateWordHTML() {
+  const s = state;
+  const docxPhoto = await getDocxPhoto();
+  let fullName = [s.surname.trim(), s.name.trim(), s.middlename.trim()].filter(Boolean).join(' ');
+  if (!fullName) fullName = 'Фамилия Имя Отчество';
+  const position = s.position.trim();
+  const contacts = [s.email, s.phone, s.city, s.link].map(x => x.trim()).filter(Boolean);
+
+  // Используем простую верстку, так как Word не переваривает Flexbox
+  let html = `
+    <div style="font-family: Arial, sans-serif; color: #000; font-size: 11pt; line-height: 1.5;">
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px;">
+        <tr>
+          <td style="vertical-align: top;">
+            <h1 style="font-size: 24pt; margin: 0 0 5px 0; font-family: Georgia, serif;">${esc(fullName)}</h1>
+            ${position ? `<div style="font-size: 13pt; color: #1e40af; font-weight: bold; margin-bottom: 5px;">${esc(position)}</div>` : ''}
+            <div style="font-size: 10pt; color: #444;">${contacts.map(c => esc(c)).join(' &nbsp;·&nbsp; ')}</div>
+          </td>
+          ${docxPhoto ? `<td style="width: 100px; text-align: right; vertical-align: top;"><img src="${docxPhoto}" width="100" height="100" style="width: 100px; height: 100px; border-radius: 50%;"></td>` : ''}
+        </tr>
+      </table>
+  `;
+
+  const personalItems = [];
+  if (s.gender) personalItems.push(`<b>Пол:</b> ${esc(s.gender)}`);
+  if (s.citizenship.trim()) personalItems.push(`<b>Гражданство:</b> ${esc(s.citizenship)}`);
+  if (s.salary.trim()) personalItems.push(`<b>Желаемая зарплата:</b> ${esc(s.salary)}`);
+  if (s.schedule) personalItems.push(`<b>График работы:</b> ${esc(s.schedule)}`);
+
+  if (personalItems.length) {
+    html += `<div style="margin-bottom: 15px; font-size: 10.5pt; color: #333;">${personalItems.join(' &nbsp;&nbsp; | &nbsp;&nbsp; ')}</div>`;
+  }
+
+  if (s.summary.trim()) {
+    html += `<h2 style="font-size: 12pt; color: #1e40af; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin-top: 15px; margin-bottom: 10px;">О себе</h2>
+      <p style="margin-top: 0;">${esc(s.summary).replace(/\n/g, '<br>')}</p>`;
+  }
+
+  const exp = s.experience.filter(e => e.title.trim() || e.company.trim() || e.duties.trim());
+  if (exp.length) {
+    html += `<h2 style="font-size: 12pt; color: #1e40af; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin-top: 15px; margin-bottom: 10px;">Опыт работы</h2>`;
+    exp.forEach(e => {
+      const duties = e.duties.split('\n').map(d => d.trim()).filter(Boolean);
+      html += `
+        <div style="margin-bottom: 10px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="font-weight: bold; font-size: 11pt;">${esc(e.title.trim()) || 'Должность'}</td>
+              <td style="text-align: right; font-weight: bold; color: #1e40af;">${esc(e.period)}</td>
+            </tr>
+          </table>
+          ${e.company.trim() ? `<div style="color: #555; font-size: 10pt; margin-bottom: 4px;">${esc(e.company)}</div>` : ''}
+          ${duties.length ? `<ul style="margin: 5px 0 0 0; padding-left: 20px;">${duties.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` : ''}
+        </div>
+      `;
+    });
+  }
+
+  const edu = s.education.filter(e => e.school.trim() || e.degree.trim());
+  if (edu.length) {
+    html += `<h2 style="font-size: 12pt; color: #1e40af; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin-top: 15px; margin-bottom: 10px;">Образование</h2>`;
+    edu.forEach(e => {
+      html += `
+        <div style="margin-bottom: 10px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="font-weight: bold; font-size: 11pt;">${esc(e.school.trim()) || 'Учебное заведение'}</td>
+              <td style="text-align: right; font-weight: bold; color: #1e40af;">${esc(e.period)}</td>
+            </tr>
+          </table>
+          ${e.degree.trim() ? `<div style="color: #555; font-size: 10pt;">${esc(e.degree)}</div>` : ''}
+        </div>
+      `;
+    });
+  }
+
+  const langs = s.languages.filter(l => l.name.trim());
+  if (langs.length) {
+    html += `<h2 style="font-size: 12pt; color: #1e40af; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin-top: 15px; margin-bottom: 10px;">Языки</h2>
+      <ul style="margin: 0; padding-left: 20px;">
+        ${langs.map(l => `<li><b>${esc(l.name)}</b> — ${esc(l.level)}</li>`).join('')}
+      </ul>`;
+  }
+
+  const skills = s.skills.split(/[\n,]+/).map(x => x.trim()).filter(Boolean);
+  if (skills.length) {
+    html += `<h2 style="font-size: 12pt; color: #1e40af; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin-top: 15px; margin-bottom: 10px;">Навыки</h2>
+      <p style="margin-top: 0;">${skills.map(sk => esc(sk)).join(', ')}</p>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+async function handleDownloadDOCX() {
+  if (!validateAll()) {
+    const firstInvalid = document.querySelector('.invalid');
+    if (firstInvalid) firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  if (typeof htmlDocx === 'undefined') {
+    alert('Библиотека для Word не загрузилась. Пожалуйста, проверьте подключение к интернету и обновите страницу.');
+    return;
+  }
+
+  const btn = document.getElementById('docxBtn');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Готовим Word…';
+
+  try {
+    const bodyHtml = await generateWordHTML();
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Резюме</title>
+      </head>
+      <body>
+        ${bodyHtml}
+      </body>
+      </html>
+    `;
+
+    const converted = htmlDocx.asBlob(html, { orientation: 'portrait', margins: { top: 720, right: 720, bottom: 720, left: 720 } });
+    const url = URL.createObjectURL(converted);
+    
+    let fullName = [state.surname.trim(), state.name.trim(), state.middlename.trim()].filter(Boolean).join(' ');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (fullName ? `Резюме — ${fullName}` : 'Резюме') + '.docx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('DOCX failed:', err);
+    alert('Не удалось создать Word. Попробуйте скачать PDF.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
+}
+
+document.getElementById('docxBtn').addEventListener('click', handleDownloadDOCX);
+
+/* ================== Очистить ================== */
+document.getElementById('clearBtn').addEventListener('click', () => {
+  if (!confirm('Очистить все введённые данные? Действие необратимо.')) return;
+  try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+  Object.keys(state).forEach(k => {
+    state[k] = (k === 'experience' || k === 'education' || k === 'languages') ? [] : '';
+  });
+  state.schedule = 'Любой';
+  state.experience.push(emptyExp());
+  state.education.push(emptyEdu());
+  state.languages.push(emptyLang());
+  
+  STATIC_FIELDS.forEach(k => { 
+    const el = document.getElementById('f_' + k);
+    if (el) el.value = (k === 'schedule') ? 'Любой' : '';
+  });
+  
+  clearAllErrors();
+  renderExperienceForm();
+  renderEducationForm();
+  renderLanguagesForm();
+  renderPhotoThumb();
+  renderPreview();
+});
+
+/* ================== Пример ================== */
+document.getElementById('sampleBtn').addEventListener('click', () => {
+  Object.assign(state, {
+    surname: 'Фамилия',
+    name: 'Имя',
+    middlename: 'Отчество',
+    position: 'Продуктовый дизайнер',
+    email: 'example@example.com',
+    phone: '+7 777 777-77-77',
+    city: 'Москва',
+    link: 'example.com/portfolio',
+    photo: '',
+    gender: 'Женский',
+    citizenship: 'Российская Федерация',
+    salary: '150 000',
+    schedule: 'Удаленная работа',
+    summary: 'Продуктовый дизайнер с 5-летним опытом. Проектирую интерфейсы, которые увеличивают конверсию и снижают нагрузку на поддержку. Работала над B2C-сервисами с аудиторией более 1 млн пользователей.',
+    experience: [
+      { title: 'Продуктовый дизайнер', company: 'ООО «Ромашка»', period: '2022 — 2024',
+        duties: 'Спроектировала новый онбординг — конверсия в первый заказ выросла на 23%.\nЗапустила дизайн-систему, ускорившую работу команды на 30%.\nПровожу UX-исследования и A/B-тесты.' },
+      { title: 'UI/UX дизайнер', company: 'ООО «Василёк»', period: '2020 — 2022',
+        duties: 'Вела 8 проектов одновременно — от лендингов до мобильных приложений.\nСобрала и описала библиотеку компонентов в Figma.' }
+    ],
+    education: [
+      { school: 'Университет «Пример»', degree: 'Графический дизайн, бакалавр', period: '2016 — 2020' }
+    ],
+    languages: [
+      { name: 'Английский', level: 'C1' },
+      { name: 'Немецкий', level: 'B1' }
+    ],
+    skills: 'Figma, Adobe Photoshop, Прототипирование, UX-исследования, Дизайн-системы, A/B-тестирование'
+  });
+  
+  STATIC_FIELDS.forEach(k => { 
+    const el = document.getElementById('f_' + k);
+    if (el) el.value = state[k];
+  });
+  
+  clearAllErrors();
+  renderExperienceForm();
+  renderEducationForm();
+  renderLanguagesForm();
+  renderPhotoThumb();
+  renderPreview();
+  scheduleSave();
+});
+
+/* ================== Инициализация ================== */
+(function init() {
+  const draft = loadDraft();
+  if (draft && typeof draft === 'object') {
+    Object.assign(state, draft);
+  }
+  if (!Array.isArray(state.experience) || !state.experience.length) state.experience = [emptyExp()];
+  if (!Array.isArray(state.education) || !state.education.length) state.education = [emptyEdu()];
+  if (!Array.isArray(state.languages) || !state.languages.length) state.languages = [emptyLang()];
+  
+  if (typeof state.photo !== 'string') state.photo = '';
+  if (typeof state.surname !== 'string') state.surname = '';
+  if (typeof state.middlename !== 'string') state.middlename = '';
+  if (!state.schedule) state.schedule = 'Любой';
+
+  STATIC_FIELDS.forEach(k => {
+    const el = document.getElementById('f_' + k);
+    if (el) el.value = state[k] || (k === 'schedule' ? 'Любой' : '');
+  });
+  
+  renderExperienceForm();
+  renderEducationForm();
+  renderLanguagesForm();
+  renderPhotoThumb();
+  renderPreview();
+})();
+</script>
+</body>
+</html>
